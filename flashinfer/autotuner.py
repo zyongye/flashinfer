@@ -1600,7 +1600,7 @@ class AutoTuner:
         return generated_profiles
 
     @classmethod
-    @lru_cache(maxsize=None)
+    @lru_cache(maxsize=512)
     def _find_nearest_profile(
         cls, shapes: Tuple[torch.Size], tuning_config: TuningConfig
     ) -> Tuple:
