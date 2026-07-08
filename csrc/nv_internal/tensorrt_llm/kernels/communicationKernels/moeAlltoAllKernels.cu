@@ -35,6 +35,15 @@ namespace tensorrt_llm::kernels::moe_alltoall {
 #define DISABLE_TIMEOUT 0
 #endif
 
+// Seconds a rank spin-waits for a peer's completion flag before trapping.
+// Override at build time with -DMOE_A2A_TIMEOUT_SEC=<seconds>. The default is
+// generous because first-run kernel autotuning (e.g. vLLM's FlashInfer
+// autotune warmup) can desynchronize EP ranks by many minutes; a short
+// timeout here turns that into a fatal trap that poisons the CUDA context.
+#ifndef MOE_A2A_TIMEOUT_SEC
+#define MOE_A2A_TIMEOUT_SEC 7200
+#endif
+
 // Helper function for ceiling division
 template <typename T>
 __host__ __device__ inline T ceilDiv(T m, T n) {
@@ -181,8 +190,9 @@ __host__ __device__ inline T ceilDiv(T m, T n) {
 #if DISABLE_TIMEOUT
 #define check_timeout(s) false
 #else
-// 300 * 2000 MHz - should be high enough on any GPU but will prevent a hang
-#define check_timeout(s) ((clock64() - (s)) > (300ll * 2000ll * 1000ll * 1000ll))
+// MOE_A2A_TIMEOUT_SEC * 2000 MHz - generous on any GPU but will prevent a hang
+#define check_timeout(s) \
+  ((clock64() - (s)) > ((long long)MOE_A2A_TIMEOUT_SEC * 2000ll * 1000ll * 1000ll))
 #endif
 
 // ============================================================================
