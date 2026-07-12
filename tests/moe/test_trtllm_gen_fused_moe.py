@@ -1367,6 +1367,23 @@ def test_deepseek_ngroup1_block_per_token_routing(
             },
             id="MiniMax2_256e",
         ),
+        pytest.param(
+            {
+                "num_experts": 128,
+                "top_k": 4,
+                "padding": 8,
+                "n_groups": None,
+                "top_k_groups": None,
+                "routed_scaling": 2.5,
+                "has_routing_bias": True,
+                "routing_method_type": RoutingMethodType.MiniMax2,
+                "num_fused_shared_experts": 1,
+                "compatible_moe_impls": [FP8BlockScaleMoe],
+                "compatible_intermediate_size": [512],
+                "enable_autotune": False,
+            },
+            id="MiniMaxM3_128e_top4_fused_shared_1",
+        ),
     ],
 )
 @pytest.mark.parametrize(

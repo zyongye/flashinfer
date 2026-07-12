@@ -87,7 +87,7 @@ class RoutingConfig:
     topk_group : int or None
         Number of groups selected in DeepSeekV3.
     routed_scaling_factor : float or None
-        Fixed routing weight scaling (DeepSeekV3).
+        Fixed routing weight scaling (DeepSeekV3 and MiniMax2).
     """
 
     num_experts: int

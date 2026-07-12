@@ -2887,7 +2887,8 @@ def trtllm_bf16_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     use_shuffled_weight : bool
@@ -3084,7 +3085,8 @@ def trtllm_bf16_routed_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     use_shuffled_weight : bool
@@ -3291,7 +3293,8 @@ def trtllm_fp8_per_tensor_scale_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     do_finalize : bool
@@ -3682,7 +3685,8 @@ def trtllm_fp8_block_scale_routed_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     use_shuffled_weight : bool
@@ -3916,7 +3920,8 @@ def trtllm_fp4_block_scale_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     do_finalize : bool
@@ -4110,7 +4115,8 @@ def trtllm_fp4_block_scale_routed_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     do_finalize : bool
@@ -4270,7 +4276,8 @@ def trtllm_mxint4_block_scale_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     do_finalize : bool
@@ -4420,7 +4427,8 @@ def trtllm_mxint4_block_scale_routed_moe(
         - ``6`` ``SigmoidRenorm`` — Sigmoid → TopK → Renormalize (divide by
           the sum of the top-K weights).
         - ``7`` ``MiniMax2`` — Sigmoid + Bias → TopK → ScaledSumNormalize
-          (``routeScale = 1.0``, ``epsilon = 1e-20``).
+          (``routeScale = routed_scaling_factor`` or ``1.0`` when ``None``,
+          ``epsilon = 1e-20``).
         - ``8`` ``Sigmoid`` — Sigmoid → TopK (no renormalization).
         - ``9`` ``Unspecified`` — reserved.
     do_finalize : bool

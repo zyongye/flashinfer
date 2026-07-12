@@ -94,7 +94,9 @@ void Runner::run(void* routingLogits, void* routingBias, int32_t numTokens, int3
 
     routingData.mNumTokens = numTokens;
     routingData.mNumExperts = numExperts;
+    routingData.mNumFusedSharedExperts = numFusedSharedExpert;
     routingData.mTopK = topK;
+    routingData.mTotalExpertsPerToken = topK + numFusedSharedExpert;
     routingData.mPaddingLog2 = computeLog2(mTileTokensDim);
     routingData.mTileTokensDim = mTileTokensDim;
     routingData.mLocalExpertsStartIdx = localExpertOffset;
@@ -104,9 +106,9 @@ void Runner::run(void* routingLogits, void* routingBias, int32_t numTokens, int3
 
     moe::dev::routing::routingCustom::run(routingData, stream);
   } else if (routingMethodType == RoutingMethodType::MiniMax2) {
-    // MiniMaxM2: sigmoid(logit) + bias → topK → renormalize un-biased sigmoid scores.
-    // Similar to DeepSeek no-groups but with routeScale = 1.0 and epsilon = 1e-20
-    // to match the Python reference: weight / (sum + 1e-20).
+    // MiniMax M2/M3: sigmoid(logit) + bias → topK → renormalize un-biased sigmoid scores.
+    // Similar to DeepSeek no-groups but with epsilon = 1e-20 to match the Python reference:
+    // weight / (sum + 1e-20).
     moe::dev::routing::routingCustom::Data routingData;
 
     routingData.mDtypeOutput = btg::Dtype::Bfloat16;
@@ -135,7 +137,9 @@ void Runner::run(void* routingLogits, void* routingBias, int32_t numTokens, int3
 
     routingData.mNumTokens = numTokens;
     routingData.mNumExperts = numExperts;
+    routingData.mNumFusedSharedExperts = numFusedSharedExpert;
     routingData.mTopK = topK;
+    routingData.mTotalExpertsPerToken = topK + numFusedSharedExpert;
     routingData.mPaddingLog2 = computeLog2(mTileTokensDim);
     routingData.mTileTokensDim = mTileTokensDim;
     routingData.mLocalExpertsStartIdx = localExpertOffset;

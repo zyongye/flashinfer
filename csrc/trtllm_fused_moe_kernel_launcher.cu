@@ -393,8 +393,13 @@ class FusedMoeLauncher {
         << tensor_name << " must be on the same device as hidden_states.";
     TVM_FFI_ICHECK_EQ(value.dtype(), dl_float32) << tensor_name << " must be float32.";
     TVM_FFI_ICHECK_EQ(value.ndim(), 1) << tensor_name << " must be 1D.";
-    TVM_FFI_ICHECK_EQ(value.size(0), args->local_num_experts)
-        << tensor_name << " must have shape [local_num_experts].";
+    // Fused shared experts widen the processed local-expert set to
+    // local_num_experts + num_fused_shared_experts; per-expert activation
+    // params (alpha/beta/clamp) must cover the appended shared experts too.
+    TVM_FFI_ICHECK_EQ(value.size(0),
+                      args->local_num_experts + args->num_fused_shared_experts)
+        << tensor_name
+        << " must have shape [local_num_experts + num_fused_shared_experts].";
     TVM_FFI_ICHECK(value.IsContiguous()) << tensor_name << " must be contiguous.";
   }
 

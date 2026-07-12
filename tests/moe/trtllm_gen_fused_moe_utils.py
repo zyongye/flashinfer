@@ -2193,7 +2193,13 @@ def routing_reference_sigmoid_renorm(
 
 
 def routing_reference_minimax2(
-    expert_logits, routing_bias, top_k, num_experts, padding, routed_scaling_factor
+    expert_logits,
+    routing_bias,
+    top_k,
+    num_experts,
+    padding,
+    routed_scaling_factor,
+    num_fused_shared_experts=0,
 ):
     """Sigmoid + Bias -> TopK -> ScaledSumNormalize routing reference (MiniMax2).
     Bias affects expert selection but NOT the final weights.
@@ -2216,7 +2222,7 @@ def routing_reference_minimax2(
     for i in range(topk_idx.shape[0]):
         for j in range(topk_idx.shape[1]):
             scores[i, topk_idx[i, j]] = raw_weights[i, j]
-    permute_info = routing_reference(scores, top_k, padding)
+    permute_info = routing_reference(scores, top_k, padding, num_fused_shared_experts)
     return permute_info, scores
 
 
@@ -3407,7 +3413,13 @@ def run_moe_test(
         )
     elif routing_method_type == RoutingMethodType.MiniMax2:
         permute_info, scores = routing_reference_minimax2(
-            expert_logits, routing_bias, top_k, num_experts, padding, routed_scaling
+            expert_logits,
+            routing_bias,
+            top_k,
+            num_experts,
+            padding,
+            routed_scaling,
+            num_fused_shared_experts=num_fused_shared_experts,
         )
     elif routing_method_type == RoutingMethodType.Sigmoid:
         permute_info, scores = routing_reference_sigmoid_renorm(

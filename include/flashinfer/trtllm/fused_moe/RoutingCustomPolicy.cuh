@@ -727,10 +727,10 @@ struct PolicyTraits<SigmoidPreprocess, SumNormalizePostprocess> {
 /// SigmoidBias + ScaledSumNormalize (DeepSeek nGroup≤1 / MiniMax2 / Kimi-K2 / Nemotron SuperV3).
 template <>
 struct PolicyTraits<SigmoidBiasPreprocess, ScaledSumNormalizePostprocess> {
-  using Pairs = TierList<Tier<128, 8>,  // Small expert counts (≤128 experts, e.g. DeepSeek-V2-Lite)
-                         Tier<256, 8>,  // MiniMax M2 (256 experts, topK=6)
-                         Tier<384, 8>,  // Kimi K2 (384 experts)
-                         Tier<512, 8>,  // DeepSeek nGroup≤1 (256 experts → E512 fallback)
+  using Pairs = TierList<Tier<128, 8>,   // MiniMax M3 (128 experts, topK=4), DeepSeek-V2-Lite
+                         Tier<256, 8>,   // MiniMax M2 (256 experts, topK=6)
+                         Tier<384, 8>,   // Kimi K2 (384 experts)
+                         Tier<512, 8>,   // DeepSeek nGroup≤1 (256 experts → E512 fallback)
                          Tier<512, 22>,  // Nemotron Super V3 (512 experts, topK=22, nGroup≤1)
                          Tier<1024, 32>  // Default fallback (expert count may grow beyond 512)
                          >;

@@ -1119,10 +1119,10 @@ __global__ void __launch_bounds__(kBlockScoresKernelBlockDim)
 
     // Reset `mPtrExpertCounts` (histogram needed by the downstream coop /
     // multi-kernel permutation paths).  Block 0 does this across its threads;
-    // other blocks skip to avoid redundant writes.  Size is 2*numExperts (the
-    // array is used both for the final histogram and the tile-offset histogram).
+    // other blocks skip to avoid redundant writes.  The array is used both for
+    // the final histogram and the tile-offset histogram.
     if (blockIdx.x == 0 && params.mPtrExpertCounts != nullptr) {
-      int32_t const expertCountsNum = 2 * params.mNumExperts;
+      int32_t const expertCountsNum = 2 * (params.mNumExperts + params.mNumFusedSharedExperts);
       for (int i = threadIdx.x; i < expertCountsNum; i += blockDim.x) {
         params.mPtrExpertCounts[i] = 0;
       }
@@ -1174,17 +1174,27 @@ __global__ void __launch_bounds__(kBlockScoresKernelBlockDim)
                            params.mExpertSelectParams.mPostprocessParams);
 
     // Phase 4: write packed (score, expertIdx) for the downstream permutation stage.
+    int32_t const expertsPerToken =
+        params.mNumFusedSharedExperts > 0 ? params.mTotalExpertsPerToken : params.mTopK;
     if (laneIdx < params.mTopK) {
       int32_t const expertIdx = topExperts[laneIdx];
       PackedScoreIdx<OutputT> packedScore{static_cast<OutputT>(topScores[laneIdx]),
                                           static_cast<int16_t>(expertIdx)};
-      params.mPtrTopKPacked[int64_t{tokenIdx} * int64_t{params.mTopK} + laneIdx] = packedScore;
+      params.mPtrTopKPacked[int64_t{tokenIdx} * int64_t{expertsPerToken} + laneIdx] = packedScore;
       // Routing replay: record selected expert IDs. Layout: [num_tokens, topK]
-      // -- same indexing as mPtrTopKPacked.
+      // even when mPtrTopKPacked has extra fused-shared-expert slots.
       if (params.mPtrRoutingReplayOut != nullptr) {
         params.mPtrRoutingReplayOut[int64_t{tokenIdx} * int64_t{params.mTopK} + laneIdx] =
             static_cast<int16_t>(expertIdx);
       }
+    }
+
+    if (laneIdx < params.mNumFusedSharedExperts) {
+      int64_t const sharedIdx =
+          int64_t{tokenIdx} * int64_t{expertsPerToken} + params.mTopK + laneIdx;
+      PackedScoreIdx<OutputT> packedScore{static_cast<OutputT>(1.0F),
+                                          static_cast<int16_t>(params.mNumExperts + laneIdx)};
+      params.mPtrTopKPacked[sharedIdx] = packedScore;
     }
 
 #if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 900))
@@ -1316,6 +1326,9 @@ void run(Data const& data, void* stream) {
   TVM_FFI_ICHECK(data.mPtrTopKPacked != nullptr || data.mPtrScores != nullptr ||
                  data.mPtrTopKIds != nullptr)
       << "Routing kernel requires at least one input parameter";
+  TVM_FFI_ICHECK(data.mNumFusedSharedExperts == 0 || data.mPtrScores != nullptr)
+      << "Fused shared experts require routing from logits; precomputed routing cannot be expanded "
+         "in place.";
 
   // When topK is already computed (mPtrTopKIds or mPtrTopKPacked without scores),
   // delegate to the shared post-topK pipeline which handles all path selection
@@ -1344,6 +1357,39 @@ void run(Data const& data, void* stream) {
   TVM_FFI_ICHECK_LE(data.mNumExperts, static_cast<int32_t>(MaxSupportedExperts))
       << "Routing kernel expects #experts " << data.mNumExperts << " to be no more than "
       << MaxSupportedExperts << ".";
+
+  if (data.mNumFusedSharedExperts > 0) {
+    int32_t const totalExperts = data.mNumExperts + data.mNumFusedSharedExperts;
+    int32_t const totalExpertsPerToken = data.mTopK + data.mNumFusedSharedExperts;
+
+    TVM_FFI_ICHECK(data.mPtrTopKPacked != nullptr)
+        << "Fused shared experts require mPtrTopKPacked for the expanded routing layout.";
+    TVM_FFI_ICHECK(queryPolicySupportsBlockPerToken(data))
+        << "Fused shared experts require a routing policy with block-per-token support.";
+    TVM_FFI_ICHECK_LE(data.mNumFusedSharedExperts, WarpSize)
+        << "Number of fused shared experts must be no more than " << WarpSize << ", got "
+        << data.mNumFusedSharedExperts << ".";
+    TVM_FFI_ICHECK_EQ(data.mTotalExpertsPerToken, totalExpertsPerToken)
+        << "mTotalExpertsPerToken must equal routed topK + fused shared experts.";
+    TVM_FFI_ICHECK_LE(totalExpertsPerToken, static_cast<int32_t>(MaxSupportedTopExperts))
+        << "Routing kernel expects routed topK + fused shared experts <= " << MaxSupportedTopExperts
+        << ", got " << totalExpertsPerToken << ".";
+    TVM_FFI_ICHECK_LE(totalExperts, static_cast<int32_t>(MaxSupportedExperts))
+        << "Routing kernel expects routed + fused shared experts <= " << MaxSupportedExperts
+        << ", got " << totalExperts << ".";
+
+    // Shared experts widen both the per-token routing layout and the local expert range. Compute
+    // routed TopK first, append the shared slots in the same kernel, then reuse the common
+    // permutation pipeline with the effective totals.
+    Data mutableData = data;
+    launchBlockScoresKernel(mutableData, stream);
+    mutableData.mPtrScores = nullptr;
+    mutableData.mNumExperts = totalExperts;
+    mutableData.mTopK = totalExpertsPerToken;
+    mutableData.mNumLocalExperts += data.mNumFusedSharedExperts;
+    runPostTopKPipeline(mutableData, stream);
+    return;
+  }
 
   static int const smMajor = tensorrt_llm::common::getSMVersion() / 10;
   bool const useStaticBlock = data.mNumTokens <= BlockKernelMaxNumTokens;
